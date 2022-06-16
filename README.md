@@ -1,4 +1,4 @@
-# Django REST API Hotel
+# Django REST API Kiot Management
 
 ## How To Run
 ### 1. Build Dọcker
