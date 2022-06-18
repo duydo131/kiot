@@ -11,7 +11,7 @@ from apps.users.models import User
 
 class ImportStatus(models.TextChoices):
     UPLOAD = "UPLOAD", _("UPLOAD")
-    VALIDATE = "VALIDATE", _("VALIDATE")
+    EXTRACT = "EXTRACT", _("EXTRACT")
     PROCESS = "PROCESS", _("PROCESS")
     SUCCESS = "SUCCESS", _("SUCCESS")
     FAIL = "FAIL", _("FAIL")

@@ -88,3 +88,7 @@ def to_dict(model: Model, keys: list = None):
     if keys is None:
         keys = [field.name for field in model._meta.fields]
     return {key: getattr(model, key) for key in keys}
+
+
+def is_dict_values_none(row_data: dict):
+    return all(x is None for x in row_data.values())

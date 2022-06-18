@@ -1,21 +1,19 @@
-from django.contrib.auth import authenticate
-from django.utils.translation import gettext_lazy as _
+from builtins import ImportError
+
 from drf_yasg.utils import swagger_auto_schema
-from rest_framework import viewsets, status, exceptions
-from rest_framework.exceptions import APIException
+from drf_yasg.utils import swagger_auto_schema
+from django.http import FileResponse
+from rest_framework import viewsets
+from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from apps.terminals.helper.catalog import get_by_catalog_import_input
-from apps.terminals.helper.product import get_by_product_input
-from apps.terminals.models import Product, CatalogImport
+from apps.terminals.models import CatalogImport
 from apps.terminals.serializers.catalog import CatalogSerializer, CatalogListInputSerializer
-from apps.terminals.serializers.product import ProductSerializer, ProductListInputSerializer, ProductCreateSerializer, \
-    AddProductSerializer, ProductDetailSerializer
-from apps.users.serializers import LoginSerializer
 from core.base_view import BaseView
 from core.mixins import GetSerializerClassMixin
+from core.importer import Importer
 from core.permissions import IsManager
-from core.swagger_schemas import ManualParametersAutoSchema
 
 
 class CatalogViewSet(GetSerializerClassMixin, viewsets.ModelViewSet, BaseView):
@@ -51,3 +49,45 @@ class CatalogViewSet(GetSerializerClassMixin, viewsets.ModelViewSet, BaseView):
 
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
+
+    @swagger_auto_schema(
+        operation_description="Export Customer",
+    )
+    @action(
+        methods=['GET'],
+        detail=False,
+        url_path='template-import',
+        url_name='template_import',
+        permission_classes=[IsManager],
+    )
+    def template_import(self, request, *args, **kwargs):
+        user = request.user
+        dest_file = f"/tmp/{user.id}-products.xlsx"
+        Importer.import_products(dest_file)
+        response = FileResponse(
+            open(dest_file, 'rb'),
+            filename="template_import_product.xlsx",
+            content_type="application/vnd.ms-excel"
+        )
+        return response
+
+    @swagger_auto_schema(
+        operation_description="Export Customer",
+    )
+    @action(
+        methods=['GET'],
+        detail=False,
+        url_path='import-product',
+        url_name='import_product',
+        permission_classes=[IsManager],
+    )
+    def import_product(self, request, *args, **kwargs):
+        user = request.user
+        dest_file = f"/tmp/{user.id}-products.xlsx"
+        Importer.import_products(dest_file)
+        response = FileResponse(
+            open(dest_file, 'rb'),
+            filename="template_import_product.xlsx",
+            content_type="application/vnd.ms-excel"
+        )
+        return response

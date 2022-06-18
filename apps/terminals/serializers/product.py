@@ -59,6 +59,20 @@ class ProductCreateSerializer(serializers.ModelSerializer):
         return data
 
 
+class ImportProductSerializer(BaseSerializer):
+    name = serializers.CharField(required=True)
+    sku = serializers.CharField(required=True)
+    price = serializers.IntegerField(required=True)
+    terminal_code = serializers.UUIDField(required=True)
+    quantity = serializers.IntegerField(required=True)
+
+    def validate(self, data):
+        terminal_code = data.get('terminal_code')
+        terminal = Terminal.objects.get(code=terminal_code)
+        data['terminal'] = terminal
+        return data
+
+
 class AddProductSerializer(BaseSerializer):
     name = serializers.CharField(required=False)
     sku = serializers.CharField(required=False)

@@ -21,3 +21,4 @@ django-celery-results==2.0.1
 drf-extensions==0.2
 django_redis
 mysqlclient==2.1.0
+openpyxl==3.0.10

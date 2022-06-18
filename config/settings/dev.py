@@ -37,6 +37,16 @@ PRICE_PER_DAY = 2000
 PER_CENT_ORDER = 1
 CEILING_PRICE = 5000
 
+
+EXCEL_TEMPLATE_DIR = os.path.join(os.path.dirname(BASE_DIR), "template")
+IMPORT_PRODUCT_TEMPLATE = os.path.join(
+    EXCEL_TEMPLATE_DIR, "Add_Product_Form.xlsx"
+)
+
+USE_LOCAL_WORKBOOK=True
+
+FILE_URL = 'localhost:8000'
+
 # LOGGING
 LOGGING = {
     'version': 1,

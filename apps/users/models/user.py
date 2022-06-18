@@ -6,7 +6,7 @@ from django.conf import settings
 from django.contrib.auth.base_user import AbstractBaseUser
 from django.db import models
 from django.utils.translation import gettext_lazy as _
-from safedelete import SOFT_DELETE_CASCADE, HARD_DELETE
+from safedelete import HARD_DELETE
 from safedelete.models import SafeDeleteMixin
 
 from apps.users.models.user_manager import CustomUserManager
