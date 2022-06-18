@@ -39,7 +39,7 @@ class TerminalPayment(SafeDeleteMixin):
 
     class Meta:
         db_table = "terminal_payment"
-        ordering = ["created_at"]
+        ordering = ["-created_at"]
 
     def __str__(self):
         return str(self.id)

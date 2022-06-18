@@ -50,38 +50,14 @@ class CatalogViewSet(GetSerializerClassMixin, viewsets.ModelViewSet, BaseView):
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
-    @swagger_auto_schema(
-        operation_description="Export Customer",
-    )
-    @action(
-        methods=['GET'],
-        detail=False,
-        url_path='template-import',
-        url_name='template_import',
-        permission_classes=[IsManager],
-    )
-    def template_import(self, request, *args, **kwargs):
-        user = request.user
-        dest_file = f"/tmp/{user.id}-products.xlsx"
-        Importer.import_products(dest_file)
-        response = FileResponse(
-            open(dest_file, 'rb'),
-            filename="template_import_product.xlsx",
-            content_type="application/vnd.ms-excel"
-        )
-        return response
 
+class ProductSampleFileView(BaseView):
+    @staticmethod
     @swagger_auto_schema(
-        operation_description="Export Customer",
+        operation_description="Product Sample File",
+        responses={200: {}},
     )
-    @action(
-        methods=['GET'],
-        detail=False,
-        url_path='import-product',
-        url_name='import_product',
-        permission_classes=[IsManager],
-    )
-    def import_product(self, request, *args, **kwargs):
+    def get(request):
         user = request.user
         dest_file = f"/tmp/{user.id}-products.xlsx"
         Importer.import_products(dest_file)

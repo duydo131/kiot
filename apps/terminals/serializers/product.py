@@ -27,15 +27,11 @@ class ProductCreateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Product
-        exclude = ("code", "terminal", )
+        exclude = ("code", "terminal")
 
     def validate(self, data):
-        request = self.context.get('request')
-        seller = request.user
-        if seller is None or isinstance(seller, AnonymousUser):
-            raise serializers.ValidationError("seller not exists")
         terminal_id = data.pop('terminal_id')
-        terminal = Terminal.objects.get(pk=terminal_id, seller_id=seller.id)
+        terminal = Terminal.objects.get(pk=terminal_id)
 
         data['terminal'] = terminal
         price = data.get('price')
@@ -60,8 +56,8 @@ class ProductCreateSerializer(serializers.ModelSerializer):
 
 
 class ImportProductSerializer(BaseSerializer):
-    name = serializers.CharField(required=True)
     sku = serializers.CharField(required=True)
+    name = serializers.CharField(required=True)
     price = serializers.IntegerField(required=True)
     terminal_code = serializers.UUIDField(required=True)
     quantity = serializers.IntegerField(required=True)
@@ -74,31 +70,29 @@ class ImportProductSerializer(BaseSerializer):
 
 
 class AddProductSerializer(BaseSerializer):
-    name = serializers.CharField(required=False)
-    sku = serializers.CharField(required=False)
-    price = serializers.IntegerField(required=False)
-    image = serializers.CharField(required=False)
-    is_active = serializers.BooleanField(required=False)
-    terminal_id = serializers.UUIDField(required=True)
-    add_type = serializers.ChoiceField(choices=[x.value for x in AddProductType])
-    quantity = serializers.IntegerField(required=False)
-    link_file = serializers.CharField(required=False)
+    sku = serializers.CharField(required=True)
+    name = serializers.CharField(required=True)
+    price = serializers.IntegerField(required=True)
+    terminal_code = serializers.CharField(required=False)
+    quantity = serializers.IntegerField(required=True)
 
     def validate(self, data):
-        add_type = data.get('add_type')
-        price = data.get('price')
-        sku = data.get('sku')
-        name = data.get('name')
-        link_file = data.get('link_file')
         quantity = data.get('quantity')
-        if add_type == AddProductType.SINGLE.value and None in [name, sku, price, quantity]:
-            raise serializers.ValidationError("name or sku or price required")
-        elif add_type == AddProductType.WITH_FILE.value and link_file is None:
-            raise serializers.ValidationError("link_file required")
-
         if quantity is not None and quantity < 0:
             raise serializers.ValidationError("quantity not negative")
 
+        terminal_code = data.get('terminal_code')
+        if terminal_code is None:
+            raise serializers.ValidationError("Missing terminal_code")
+
+        seller = self.context.get('user')
+        if seller is None or isinstance(seller, AnonymousUser):
+            raise serializers.ValidationError("seller not exists")
+        terminals = Terminal.objects.filter(code=terminal_code, seller_id=seller.id)
+        if len(terminals) != 1:
+            raise serializers.ValidationError("terminal_code not exists")
+        terminal = terminals.first()
+        data['terminal_id'] = terminal.id
         return data
 
     @tran.atomic
@@ -111,6 +105,11 @@ class AddProductSerializer(BaseSerializer):
         warehouse.save()
 
         return product
+
+
+class AddSingleProductSerializer(AddProductSerializer):
+    image = serializers.CharField(required=False)
+    is_active = serializers.BooleanField(required=False)
 
 
 class AddProductResponseSerializer(BaseSerializer):
@@ -137,3 +136,7 @@ class ProductDetailSerializer(serializers.ModelSerializer):
         model = Product
         exclude = ["deleted"]
         read_only_fields = ["created_at", "updated_at"]
+
+
+class ProductBulkCreateSerializer(BaseSerializer):
+    file_url = serializers.CharField(required=True)

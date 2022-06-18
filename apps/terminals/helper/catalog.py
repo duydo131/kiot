@@ -1,24 +1,26 @@
+from datetime import datetime
 from io import BytesIO
-from typing import ClassVar
+from typing import ClassVar, Dict
 
 from django.db import transaction
 from openpyxl import load_workbook
 from openpyxl.cell import Cell
-from datetime import datetime, date
-
+from openpyxl.styles import Font
+from openpyxl.writer.excel import save_virtual_workbook
 from rest_framework.exceptions import ValidationError
 from rest_framework.serializers import Serializer
 
 from apps.terminals.models import CatalogImport
 from apps.terminals.models.catalog import ImportStatus
-from apps.terminals.serializers.product import ImportProductSerializer
+from apps.terminals.serializers.product import AddProductSerializer
 from config.settings.dev import DATETIME_FORMAT, USE_LOCAL_WORKBOOK
 from core import external_apis
 from core.exception import ImportException
-from core.utils import is_dict_values_none
-
+from core.utils import is_dict_values_none, iterate_all
 
 ERROR_MSG = 'Lỗi dữ liệu, tải file lỗi để xem chi tiết'
+ERROR_FONT = Font(color="FF0000", name='Consolas')
+SHEET_MIME_TYPE = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
 
 
 def get_by_catalog_import_input(queryset, request_data):
@@ -47,13 +49,18 @@ def get_by_catalog_import_input(queryset, request_data):
 
 class ImportProductHandler:
 
-    def __int__(self, catalog: CatalogImport):
+    def __init__(self, catalog: CatalogImport):
         self.catalog = catalog
+        self.user = catalog.user
         self.row_index = 4
         self.max_quantity = 100
         self.total_rows = 0
-        self.serializer_cls = ImportProductSerializer
-        self.errors = []
+        self.serializer_cls = AddProductSerializer
+        self.errors: Dict[int, str] = {}
+        self.error_column = 'F'
+        self.file_url = catalog.source_file
+        self.max_try = 5
+        self.trying = 0
 
     @staticmethod
     def convert_cell_type(cell: Cell):
@@ -66,9 +73,9 @@ class ImportProductHandler:
 
     def get_work_book(self, file_url=None, data_only=True):
         if USE_LOCAL_WORKBOOK:
-            return load_workbook(file_url or self.catalog.source_file, data_only=data_only)
-        file = external_apis.download_file(file_url)
-        return load_workbook(file or self.catalog.source_file, data_only=data_only)
+            return load_workbook(file_url or self.file_url or self.catalog.source_file, data_only=data_only)
+        file = external_apis.download_file(file_url or self.file_url or self.catalog.source_file)
+        return load_workbook(file, data_only=data_only)
 
     def get_data_row_index(self):
         return self.row_index
@@ -78,6 +85,9 @@ class ImportProductHandler:
 
     def get_serializer_cls(self):
         return self.serializer_cls
+
+    def get_error_column(self):
+        return self.error_column
 
     def extract_data(self, **kwargs):
         self.catalog.status = ImportStatus.EXTRACT
@@ -96,6 +106,11 @@ class ImportProductHandler:
             if not is_dict_values_none(row_data):
                 row_data['row_index'] = index
                 data.append(row_data)
+                self.trying = 0
+            else:
+                self.trying += 1
+                if self.trying > self.max_try:
+                    break
         if len(data) > self.get_max_quantity():
             raise ValueError(f'Số lượng import > {self.get_max_quantity()}')
         if len(data) == 0:
@@ -104,9 +119,9 @@ class ImportProductHandler:
         return data
 
     def process(self):
+        import_data = self.extract_data()
         self.catalog.status = ImportStatus.PROCESS
         self.catalog.save()
-        import_data = self.extract_data()
         exception = None
         try:
             with transaction.atomic():
@@ -115,7 +130,7 @@ class ImportProductHandler:
                 for row in import_data:
                     try:
                         row_index = row.get('row_index')
-                        row_serializer = serializer_cls(data=row)
+                        row_serializer = serializer_cls(data=row, context={'user': self.user})
                         row_serializer.is_valid(raise_exception=True)
                         row_serializer.save()
                     except Exception as err:
@@ -126,7 +141,6 @@ class ImportProductHandler:
                                                                         ignore_keys=['code'],
                                                                         returned="value"))])
                         self.errors[row_index] = err_str
-                        row['row_note'] = err_str
                 if len(self.errors) > 0:
                     transaction.savepoint_rollback(sid)
                     all_errors = {**self.errors}
@@ -145,31 +159,27 @@ class ImportProductHandler:
                 exception = err
             self.catalog.save()
         finally:
-            if not(self.errors or exception):
+            if not (self.errors or exception):
                 self.catalog.status = ImportStatus.SUCCESS
+                self.catalog.quantity_product = self.total_rows
                 self.catalog.save()
             else:
-                raise Exception(message or str(exception))
+                raise ValidationError(message or str(exception))
 
-    def handle_error(self, errors, warnings):
-        workbook = self.get_work_book(file_url=self.workflow.error_file_url)
+    def handle_error(self, errors):
+        workbook = self.get_work_book(file_url=self.catalog.source_file)
         sheet = workbook.worksheets[0]
-        self.clear_old_error_data(sheet)
-        if not self.workflow.error_file_url:
-            self.style_error_header(sheet)
-            self.style_warning_header(sheet)
+        # self.clear_old_error_data(sheet)
+        # if not self.workflow.error_file_url:
+        #     self.style_error_header(sheet)
         error_column = self.get_error_column()
-        warning_column = self.get_warning_column()
         for row_index, err_string in errors.items():
             cell_id = f'{error_column}{row_index}'
             sheet[cell_id] = err_string
             sheet[cell_id].font = ERROR_FONT
-        for row_index, warning_string in warnings.items():
-            cell_id = f'{warning_column}{row_index}'
-            sheet[cell_id] = warning_string
-            sheet[cell_id].font = WARNING_FONT
 
-        files = {'file': (f'error_{self.workflow.name}', BytesIO(save_virtual_workbook(workbook)),
+        files = {'file': (f'error_{self.catalog.user.name}',
+                          BytesIO(save_virtual_workbook(workbook)),
                           SHEET_MIME_TYPE)}
         error_file_url = external_apis.upload_file(files)
         return error_file_url

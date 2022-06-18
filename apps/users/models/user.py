@@ -73,7 +73,7 @@ class User(SafeDeleteMixin, AbstractBaseUser):
 
     class Meta:
         db_table = "user"
-        ordering = ["created_at"]
+        ordering = ["-created_at"]
 
     def _generate_jwt_token(self):
         iat = datetime.now()

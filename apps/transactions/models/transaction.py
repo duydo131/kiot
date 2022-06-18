@@ -38,7 +38,7 @@ class Transaction(SafeDeleteMixin):
 
     class Meta:
         db_table = "transactions"
-        ordering = ["created_at"]
+        ordering = ["-created_at"]
 
     def __str__(self):
         return str(self.id)

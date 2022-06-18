@@ -23,7 +23,7 @@ class WareHouse(SafeDeleteMixin):
 
     class Meta:
         db_table = "warehouse"
-        ordering = ["created_at"]
+        ordering = ["-created_at"]
 
     def __str__(self):
         return str(self.id)

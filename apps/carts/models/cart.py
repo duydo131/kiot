@@ -22,7 +22,7 @@ class Cart(SafeDeleteMixin):
 
     class Meta:
         db_table = "carts"
-        ordering = ["created_at"]
+        ordering = ["-created_at"]
 
     def __str__(self):
         return self.user.name

@@ -43,7 +43,7 @@ class Order(SafeDeleteMixin):
 
     class Meta:
         db_table = "orders"
-        ordering = ["created_at"]
+        ordering = ["-created_at"]
 
     def __str__(self):
         return str(self.id)

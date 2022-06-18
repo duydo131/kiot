@@ -12,6 +12,15 @@ import (
 	"github.com/google/uuid"
 )
 
+// for DATN
+func getExtOfFileName(filename string) string {
+    ext := filepath.Ext(filename)
+    if ext == "" {
+        return ".xlsx"
+    }
+    return ext
+}
+
 func main() {
 	r := gin.Default()
 	r.Static("/file", "./assets")
@@ -39,7 +48,7 @@ func main() {
 		filename := header.Filename
 
 		log.Println(">>>>>>>>>>>>" + filename)
-		newFilename := uuid.New().String() + filepath.Ext(filename)
+		newFilename := uuid.New().String() + getExtOfFileName(filename)
 		out, err := os.Create("./assets/" + newFilename)
 		if err != nil {
 			log.Fatal(err)
@@ -67,7 +76,7 @@ func main() {
 
 		for index, file := range files {
 
-			newFilename := uuid.New().String() + filepath.Ext(file.Filename)
+			newFilename := uuid.New().String() + getExtOfFileName(file.Filename)
 
 			context.SaveUploadedFile(file, "./assets/"+newFilename)
 

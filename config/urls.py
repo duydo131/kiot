@@ -22,7 +22,7 @@ from rest_framework import permissions
 from rest_framework.routers import SimpleRouter
 
 from apps.orders.views.order import OrderViewSet
-from apps.terminals.views.catalog import CatalogViewSet
+from apps.terminals.views.catalog import CatalogViewSet, ProductSampleFileView
 from apps.terminals.views.product import ProductViewSet
 from apps.terminals.views.terminal import TerminalViewSet
 from apps.transactions.views.payment import PaymentViewSet
@@ -63,6 +63,7 @@ admin.autodiscover()
 urlpatterns = [
     path("admin/", admin.site.urls),
     path(r"api/v1/", include(api_router.urls)),
+    path('product-sample-file', ProductSampleFileView.as_view(), name='product-sample-file'),
 ]
 
 urlpatterns.extend([

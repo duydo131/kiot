@@ -43,9 +43,9 @@ IMPORT_PRODUCT_TEMPLATE = os.path.join(
     EXCEL_TEMPLATE_DIR, "Add_Product_Form.xlsx"
 )
 
-USE_LOCAL_WORKBOOK=True
+USE_LOCAL_WORKBOOK = False
 
-FILE_URL = 'localhost:8000'
+FILE_URL = 'http://0.0.0.0:8080'
 
 # LOGGING
 LOGGING = {

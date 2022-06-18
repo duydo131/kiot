@@ -92,3 +92,34 @@ def to_dict(model: Model, keys: list = None):
 
 def is_dict_values_none(row_data: dict):
     return all(x is None for x in row_data.values())
+
+
+def iterate_all(iterable, ignore_keys=None, returned="key"):
+    """Returns an iterator that returns all keys or values
+       of a (nested) iterable.
+
+       Arguments:
+           - iterable: <list> or <dictionary>
+           - returned: <string> "key" or "value"
+
+       Returns:
+           - <iterator>
+    """
+
+    if ignore_keys is None:
+        ignore_keys = []
+    if isinstance(iterable, dict):
+        for key, value in iterable.items():
+            if returned == "key":
+                yield key
+            elif returned == "value":
+                if not (isinstance(value, dict) or isinstance(value, list)) and key not in ignore_keys:
+                    yield value
+            else:
+                raise ValueError("'returned' keyword only accepts 'key' or 'value'.")
+            for ret in iterate_all(value, returned=returned, ignore_keys=ignore_keys):
+                yield ret
+    elif isinstance(iterable, list):
+        for el in iterable:
+            for ret in iterate_all(el, returned=returned, ignore_keys=ignore_keys):
+                yield ret

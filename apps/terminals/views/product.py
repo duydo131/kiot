@@ -6,10 +6,12 @@ from rest_framework.exceptions import APIException
 from rest_framework.response import Response
 
 from apps.terminals.helper.product import get_by_product_input
-from apps.terminals.models import Product
+from apps.terminals.models import Product, CatalogImport
 from apps.terminals.serializers.product import ProductSerializer, ProductListInputSerializer, ProductCreateSerializer, \
-    AddProductSerializer, ProductDetailSerializer
+    AddProductSerializer, ProductDetailSerializer, ProductBulkCreateSerializer, AddSingleProductSerializer
+from apps.terminals.task import import_product_handler
 from apps.users.serializers import LoginSerializer
+from rest_framework.decorators import action
 from core.base_view import BaseView
 from core.mixins import GetSerializerClassMixin
 from core.permissions import IsManager
@@ -22,6 +24,7 @@ class ProductViewSet(GetSerializerClassMixin, viewsets.ModelViewSet, BaseView):
     queryset_detail = Product.objects.filter()
     serializer_class = ProductSerializer
     serializer_detail_class = ProductSerializer
+    filterset_class = None
     inp_serializer_cls = ProductListInputSerializer
 
     serializer_action_classes = {
@@ -64,12 +67,31 @@ class ProductViewSet(GetSerializerClassMixin, viewsets.ModelViewSet, BaseView):
 
     @swagger_auto_schema(
         operation_description="Create new product",
-        request_body=AddProductSerializer,
+        request_body=AddSingleProductSerializer,
         responses={'201': ProductSerializer},
         permission_classes=[IsManager]
     )
     def create(self, request, *args, **kwargs):
-        serializer = AddProductSerializer(data=request.data, context={'request': request})
+        serializer = AddSingleProductSerializer(data=request.data, context={'user': request.user})
         serializer.is_valid(raise_exception=True)
         result = serializer.save()
         return Response(data=ProductSerializer(result).data)
+
+    @action(
+        methods=["POST"],
+        detail=False,
+        url_path="import",
+        url_name="bulk_create",
+        permission_classes=[IsManager],
+        filterset_class=None,
+        pagination_class=None,
+    )
+    def bulk_create(self, request, *args, **kwargs):
+        serializer = ProductBulkCreateSerializer(data=request.data)
+        serializer.is_valid()
+        file_url = serializer.validated_data['file_url']
+        user = request.user
+        catalog = CatalogImport(user=user, source_file=file_url)
+        catalog.save()
+        import_product_handler(catalog)
+        return Response(status=status.HTTP_204_NO_CONTENT)
