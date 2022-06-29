@@ -9,7 +9,8 @@ from rest_framework.exceptions import APIException
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from apps.carts.serializers.cart import CartSerializer, CartReadOnlySerializer, CartAdditionalSerializer
+from apps.carts.serializers.cart import CartSerializer, CartReadOnlySerializer, CartAdditionalSerializer, \
+    CartDeleteProductSerializer
 from apps.users.filters import UserFilterSet
 from apps.users.models.user import User, UserRole
 from apps.users.serializers import UserSerializer, UserReadOnlySerializer, LoginSerializer
@@ -171,6 +172,22 @@ class UserViewSet(GetSerializerClassMixin, viewsets.ModelViewSet):
     def update_cart(self, request, *args, **kwargs):
         user = request.user
         serializer = CartAdditionalSerializer(data=request.data, context={'cart': user.cart})
+        serializer.is_valid(raise_exception=True)
+        cart = serializer.save()
+        return Response(data=CartReadOnlySerializer(cart).data, status=status.HTTP_200_OK)
+
+    @action(
+        methods=["POST"],
+        detail=False,
+        url_path="delete_product",
+        url_name="delete_product",
+        permission_classes=[IsUser],
+        filterset_class=None,
+        pagination_class=None,
+    )
+    def delete_product(self, request, *args, **kwargs):
+        user = request.user
+        serializer = CartDeleteProductSerializer(data=request.data, context={'cart': user.cart})
         serializer.is_valid(raise_exception=True)
         cart = serializer.save()
         return Response(data=CartReadOnlySerializer(cart).data, status=status.HTTP_200_OK)

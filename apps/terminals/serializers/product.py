@@ -131,6 +131,8 @@ class ProductListInputSerializer(BaseSerializer):
 
 class ProductDetailSerializer(serializers.ModelSerializer):
     quantity = serializers.IntegerField(source='warehouse.quantity')
+    terminal_name = serializers.CharField(source='terminal.name')
+    terminal_code = serializers.CharField(source='terminal.code')
 
     class Meta:
         model = Product

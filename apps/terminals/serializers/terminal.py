@@ -26,6 +26,15 @@ class TerminalSerializer(serializers.ModelSerializer):
         read_only_fields = ["created_at", "updated_at"]
 
 
+class TerminalReadOnlySerializer(serializers.ModelSerializer):
+    total_product = serializers.IntegerField()
+
+    class Meta:
+        model = Terminal
+        exclude = ["deleted"]
+        read_only_fields = ["created_at", "updated_at"]
+
+
 class TerminalRegisterSerializer(serializers.ModelSerializer):
     time_open = serializers.DateTimeField(input_formats=[DATETIME_FORMAT], required=True)
     type_time_open = serializers.CharField(required=True)

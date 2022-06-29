@@ -169,9 +169,6 @@ class ImportProductHandler:
     def handle_error(self, errors):
         workbook = self.get_work_book(file_url=self.catalog.source_file)
         sheet = workbook.worksheets[0]
-        # self.clear_old_error_data(sheet)
-        # if not self.workflow.error_file_url:
-        #     self.style_error_header(sheet)
         error_column = self.get_error_column()
         for row_index, err_string in errors.items():
             cell_id = f'{error_column}{row_index}'

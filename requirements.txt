@@ -22,3 +22,4 @@ drf-extensions==0.2
 django_redis
 mysqlclient==2.1.0
 openpyxl==3.0.10
+# django-cors-header==3.13.0

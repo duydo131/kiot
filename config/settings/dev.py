@@ -10,6 +10,7 @@ from sentry_sdk.integrations.logging import LoggingIntegration
 
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', '3@6wj-kujdan+1^cr@$53xiox1=m*!!smls%i-zo2f-ob8r*v6')
 ALLOWED_HOSTS = ["*"]
+CORS_ORIGIN_ALLOW_ALL = True
 DEBUG = True
 
 DATABASES = {

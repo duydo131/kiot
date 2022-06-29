@@ -15,7 +15,7 @@ class Product(SafeDeleteMixin):
     code = models.CharField(max_length=50, unique=True)
     sku = models.CharField(max_length=50, blank=False, null=False)
     price = models.BigIntegerField(blank=False, null=False)
-    image = models.CharField(max_length=50, blank=True, null=True)
+    image = models.CharField(max_length=255, blank=True, null=True)
     terminal = models.ForeignKey(
         Terminal,
         on_delete=models.CASCADE,

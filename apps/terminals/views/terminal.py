@@ -1,4 +1,5 @@
 from django.contrib.auth.models import AnonymousUser
+from django.db.models import Count
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
@@ -7,9 +8,10 @@ from rest_framework.response import Response
 from apps.terminals.helper.terminal import get_by_terminal_input, calculate_price_register_terminal, \
     calculate_price_extend_terminal
 from apps.terminals.models import Terminal
+from apps.terminals.models.terminal import TerminalStatus
 from apps.terminals.serializers.product import ProductSerializer, ProductListInputSerializer
 from apps.terminals.serializers.terminal import TerminalSerializer, TerminalListInputSerializer, \
-    TerminalRegisterSerializer, TerminalPriceSerializer, TerminalExtendSerializer
+    TerminalRegisterSerializer, TerminalPriceSerializer, TerminalExtendSerializer, TerminalReadOnlySerializer
 from core.base_view import BaseView
 from core.mixins import GetSerializerClassMixin
 from core.permissions import IsManager, IsAdmin
@@ -26,8 +28,8 @@ class TerminalViewSet(GetSerializerClassMixin, viewsets.ModelViewSet, BaseView):
     filterset_class = None
 
     serializer_action_classes = {
-        "list": TerminalSerializer,
-        "retrieve": TerminalSerializer,
+        "list": TerminalReadOnlySerializer,
+        "retrieve": TerminalReadOnlySerializer,
     }
 
     def get_queryset(self):
@@ -39,6 +41,8 @@ class TerminalViewSet(GetSerializerClassMixin, viewsets.ModelViewSet, BaseView):
         else:
             queryset = get_by_terminal_input(queryset, request_data)
 
+        queryset = queryset.filter(type=TerminalStatus.PAID).annotate(total_product=Count('products'))
+
         return queryset
 
     @swagger_auto_schema(
@@ -47,8 +51,8 @@ class TerminalViewSet(GetSerializerClassMixin, viewsets.ModelViewSet, BaseView):
         responses={200: ProductSerializer},
     )
     def retrieve(self, request, pk=None, *args, **kwargs):
-        terminal = Terminal.objects.get(pk=pk)
-        return Response(data=TerminalSerializer(terminal).data, status=status.HTTP_200_OK)
+        terminal = Terminal.objects.annotate(total_product=Count('products')).get(pk=pk)
+        return Response(data=TerminalReadOnlySerializer(terminal).data, status=status.HTTP_200_OK)
 
     @action(
         methods=["GET"],
@@ -57,7 +61,7 @@ class TerminalViewSet(GetSerializerClassMixin, viewsets.ModelViewSet, BaseView):
         url_name="all",
         pagination_class=None,
         filterset_class=None,
-        permission_classes=[IsManager, IsAdmin],
+        permission_classes=[IsManager | IsAdmin],
     )
     def all(self, request, *args, **kwargs):
         queryset = self.get_queryset()

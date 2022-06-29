@@ -3,6 +3,7 @@ from rest_framework import serializers
 
 from apps.carts.models import Cart, CartProduct
 from apps.carts.serializers.cart_product import CartProductReadOnlySerializer, CartProductAdditionalSerializer
+from apps.terminals.models import Product
 from core.serializer import BaseSerializer
 
 
@@ -59,5 +60,34 @@ class CartAdditionalSerializer(BaseSerializer):
                 CartProduct.objects.bulk_create(new_cart_products)
             if len(update_cart_products) > 0:
                 CartProduct.objects.bulk_update(objs=update_cart_products, fields=['quantity'], batch_size=5)
+        cart.refresh_from_db()
+        return cart
+
+
+class CartDeleteProductSerializer(BaseSerializer):
+    product_id = serializers.UUIDField(required=True)
+
+    def validate(self, data):
+        product_id = data['product_id']
+        products = Product.objects.filter(pk=product_id)
+        if len(products) == 0:
+            raise serializers.ValidationError(f"Product {product_id} not found")
+
+        cart = self.context.get('cart')
+        if cart is None:
+            raise serializers.ValidationError("Cart of user not found")
+
+        products = cart.cart_product.filter(product_id=product_id)
+        if len(products) == 0:
+            raise serializers.ValidationError(f"Product {product_id} not in cart of user")
+
+        data['cart'] = cart
+        return data
+
+    @tran.atomic
+    def create(self, validated_data):
+        product_id = validated_data['product_id']
+        cart = validated_data['cart']
+        cart.cart_product.filter(product_id=product_id).delete()
         cart.refresh_from_db()
         return cart

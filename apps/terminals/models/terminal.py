@@ -47,7 +47,7 @@ class Terminal(SafeDeleteMixin):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        db_table = "-terminals"
+        db_table = "terminals"
         ordering = ["name"]
 
     def __str__(self):

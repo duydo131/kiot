@@ -6,7 +6,7 @@ from core.utils import timezone
 
 def get_by_terminal_input(queryset, request_data, seller_id=None):
     if seller_id is not None:
-        queryset.filter(seller_id=seller_id)
+        queryset = queryset.filter(seller_id=seller_id)
 
     ids = request_data.get('ids')
     if ids:
@@ -15,11 +15,11 @@ def get_by_terminal_input(queryset, request_data, seller_id=None):
     is_expired = request_data.get('is_expired')
     if is_expired is not None:
         now = timezone.now()
-        queryset.filter(expried_at__gte=now)
+        queryset = queryset.filter(expried_at__gte=now)
 
     status = request_data.get('status')
     if status is not None:
-        queryset.filter(status=status)
+        queryset = queryset.filter(status=status)
 
     return queryset
 
