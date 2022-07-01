@@ -9,7 +9,7 @@ from rest_framework.response import Response
 
 from apps.terminals.helper.catalog import get_by_catalog_import_input
 from apps.terminals.models import CatalogImport
-from apps.terminals.serializers.catalog import CatalogSerializer, CatalogListInputSerializer
+from apps.terminals.serializers.catalog import CatalogSerializer, CatalogListInputSerializer, CatalogReadonlySerializer
 from core.base_view import BaseView
 from core.mixins import GetSerializerClassMixin
 from core.importer import Importer
@@ -26,8 +26,8 @@ class CatalogViewSet(GetSerializerClassMixin, viewsets.ModelViewSet, BaseView):
     http_method_names = ['get']
 
     serializer_action_classes = {
-        "list": CatalogSerializer,
-        "retrieve": CatalogSerializer,
+        "list": CatalogReadonlySerializer,
+        "retrieve": CatalogReadonlySerializer,
     }
 
     def get_queryset(self):
@@ -38,7 +38,7 @@ class CatalogViewSet(GetSerializerClassMixin, viewsets.ModelViewSet, BaseView):
 
     def retrieve(self, request, pk=None, *args, **kwargs):
         catalog = CatalogImport.objects.get(pk=pk)
-        return Response(data=CatalogSerializer(catalog).data)
+        return Response(data=CatalogReadonlySerializer(catalog).data)
 
     def list(self, request, *args, **kwargs):
         queryset = self.get_queryset()

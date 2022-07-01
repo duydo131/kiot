@@ -7,6 +7,7 @@ from rest_framework.response import Response
 
 from apps.terminals.helper.product import get_by_product_input
 from apps.terminals.models import Product, CatalogImport
+from apps.terminals.serializers.catalog import CatalogImportSerializer
 from apps.terminals.serializers.product import ProductSerializer, ProductListInputSerializer, ProductCreateSerializer, \
     AddProductSerializer, ProductDetailSerializer, ProductBulkCreateSerializer, AddSingleProductSerializer
 from apps.terminals.task import import_product_handler
@@ -94,4 +95,5 @@ class ProductViewSet(GetSerializerClassMixin, viewsets.ModelViewSet, BaseView):
         catalog = CatalogImport(user=user, source_file=file_url)
         catalog.save()
         import_product_handler(catalog)
-        return Response(status=status.HTTP_204_NO_CONTENT)
+
+        return Response(data=CatalogImportSerializer(catalog).data, status=status.HTTP_200_OK)
