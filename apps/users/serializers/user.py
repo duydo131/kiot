@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
 from apps.users.models.user import User
+from core.serializer import BaseSerializer, UUIDArrayField
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -8,6 +9,18 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         exclude = ["deleted", "password"]
         read_only_fields = ["created_at", "updated_at"]
+
+
+class UserRegisterSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        exclude = ["deleted", "password"]
+        read_only_fields = ["created_at", "updated_at"]
+
+    def validate(self, attrs):
+        if attrs.get('username') is not None and attrs.get('name') is None:
+            attrs['name'] = attrs.get('username')
+        return attrs
 
 
 class UserReadOnlySerializer(serializers.Serializer):
@@ -22,6 +35,14 @@ class UserReadOnlySerializer(serializers.Serializer):
     is_active = serializers.BooleanField(read_only=True)
     created_at = serializers.DateTimeField(read_only=True)
     updated_at = serializers.DateTimeField(read_only=True)
+    total_terminal = serializers.IntegerField(read_only=True)
+    total_product = serializers.IntegerField(read_only=True)
+
+    def to_representation(self, instance):
+        user_id_to_total_product = self.context.get('user_id_to_total_product')
+        if isinstance(user_id_to_total_product, dict):
+            instance.total_product = user_id_to_total_product.get(instance.id, 0)
+        return super(UserReadOnlySerializer, self).to_representation(instance)
 
 
 class LoginSerializer(serializers.Serializer):
@@ -41,4 +62,9 @@ class RegisterSerializer(serializers.Serializer):
             raise serializers.ValidationError("Email Already")
 
         return data
+
+
+class UserListInputSerializer(BaseSerializer):
+    ids = UUIDArrayField(required=False)
+    role = serializers.CharField(required=False)
 

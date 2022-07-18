@@ -78,6 +78,12 @@ def invalidRating(value, field):
     return value
 
 
+def dictfetchall(cursor):
+    "Return all rows from a cursor as a dict"
+    columns = [col[0] for col in cursor.description]
+    return [dict(zip(columns, row)) for row in cursor.fetchall()]
+
+
 def validate_positive(value, field):
     if value < 0:
         raise serializers.ValidationError(f"{field} must be positive".format(field=field))

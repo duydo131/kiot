@@ -28,6 +28,7 @@ from apps.terminals.views.terminal import TerminalViewSet
 from apps.transactions.views.payment import PaymentViewSet
 from apps.transactions.views.transaction import TransactionViewSet
 from apps.users.views import UserViewSet
+from apps.users.views.statistic import StatisticViewSet
 
 swagger_info = openapi.Info(
     title="Eureka API",
@@ -57,6 +58,7 @@ api_router.register("payments", TransactionViewSet, basename="payments")
 api_router.register("products", ProductViewSet, basename="products")
 api_router.register("after-payment", PaymentViewSet, basename="after-payment")
 api_router.register("workload", CatalogViewSet, basename="workload")
+api_router.register("statistic", StatisticViewSet, basename="statistic")
 
 admin.autodiscover()
 

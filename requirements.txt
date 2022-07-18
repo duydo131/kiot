@@ -1,4 +1,4 @@
-Django==3.1.7
+Django==3.2.13
 djangorestframework==3.12.2
 django-filter==2.4.0
 drf-yasg==1.20.0
@@ -22,4 +22,4 @@ drf-extensions==0.2
 django_redis
 mysqlclient==2.1.0
 openpyxl==3.0.10
-# django-cors-header==3.13.0
+django-cors-headers==3.13.0

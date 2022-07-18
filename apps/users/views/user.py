@@ -1,6 +1,7 @@
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import AnonymousUser
 from django.db import transaction
+from django.db.models import Count, Sum
 from django.utils.translation import gettext_lazy as _
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import viewsets, status, exceptions
@@ -12,20 +13,23 @@ from rest_framework.response import Response
 from apps.carts.serializers.cart import CartSerializer, CartReadOnlySerializer, CartAdditionalSerializer, \
     CartDeleteProductSerializer
 from apps.users.filters import UserFilterSet
+from apps.users.helper.user import get_user_by_params, get_total_product_by_users
 from apps.users.models.user import User, UserRole
 from apps.users.serializers import UserSerializer, UserReadOnlySerializer, LoginSerializer
-from apps.users.serializers.user import RegisterSerializer
+from apps.users.serializers.user import RegisterSerializer, UserRegisterSerializer, UserListInputSerializer
+from core.base_view import BaseView
 from core.mixins import GetSerializerClassMixin
 from core.permissions import IsUser, IsManager
 from core.swagger_schemas import ManualParametersAutoSchema
 
 
-class UserViewSet(GetSerializerClassMixin, viewsets.ModelViewSet):
+class UserViewSet(GetSerializerClassMixin, viewsets.ModelViewSet, BaseView):
     permission_classes = []
     queryset = User.objects.all()
     queryset_detail = User.objects.filter()
     serializer_class = UserSerializer
     serializer_detail_class = UserReadOnlySerializer
+    inp_serializer_cls = UserListInputSerializer
 
     serializer_action_classes = {
         "list": UserReadOnlySerializer,
@@ -35,9 +39,11 @@ class UserViewSet(GetSerializerClassMixin, viewsets.ModelViewSet):
 
     def get_queryset(self):
         queryset = self.queryset.all()
-        user = self.request.user
-        if isinstance(user, AnonymousUser) or user.role != UserRole.ADMIN:
-            queryset = queryset.exclude(role=UserRole.ADMIN)
+        queryset = queryset.exclude(role=UserRole.ADMIN)
+        request_data = self.request_data
+        queryset = get_user_by_params(queryset, request_data)
+        queryset = queryset.annotate(total_terminal=Count('terminals')).order_by('-total_terminal')
+
         return queryset
 
     @swagger_auto_schema(
@@ -60,6 +66,26 @@ class UserViewSet(GetSerializerClassMixin, viewsets.ModelViewSet):
             user
         )
         return Response(data=serializer.data, status=status.HTTP_200_OK)
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        users = queryset.filter()
+        user_id_to_total_product = get_total_product_by_users(users)
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(
+                page,
+                many=True,
+                context={'user_id_to_total_product': user_id_to_total_product}
+            )
+            return self.get_paginated_response(serializer.data)
+
+        serializer = self.get_serializer(
+                queryset,
+                many=True,
+                context={'user_id_to_total_product': user_id_to_total_product}
+        )
+        return Response(serializer.data)
 
     @swagger_auto_schema(
         operation_description="Login",
@@ -96,7 +122,7 @@ class UserViewSet(GetSerializerClassMixin, viewsets.ModelViewSet):
                 status.HTTP_404_NOT_FOUND,
             )
         token = user.token
-        data = {"token": token}
+        data = {"token": token, "is_superuser": user.is_superuser}
         return Response(data=data, status=status.HTTP_200_OK)
 
     @action(
@@ -114,7 +140,7 @@ class UserViewSet(GetSerializerClassMixin, viewsets.ModelViewSet):
         validated_data = serializer.validated_data
         try:
             with transaction.atomic():
-                serializer = self.get_serializer(data=request.data)
+                serializer = UserRegisterSerializer(data=request.data)
                 serializer.is_valid(raise_exception=True)
                 self.perform_create(serializer)
                 user = dict(serializer.data)
