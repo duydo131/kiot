@@ -23,7 +23,7 @@ class Order(SafeDeleteMixin):
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
-        related_name="carts",
+        related_name="orders",
     )
     total_price = models.BigIntegerField(blank=True, null=True)
     transaction = models.OneToOneField(

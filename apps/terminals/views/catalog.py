@@ -33,6 +33,12 @@ class CatalogViewSet(GetSerializerClassMixin, viewsets.ModelViewSet, BaseView):
     def get_queryset(self):
         queryset = self.queryset.filter()
         request_data = self.request_data
+        seller = self.request.user
+        if seller.is_user:
+            return CatalogImport.objects.none()
+        elif seller.is_manager:
+            queryset = queryset.filter(user_id=seller.id)
+
         queryset = get_by_catalog_import_input(queryset, request_data)
         return queryset
 

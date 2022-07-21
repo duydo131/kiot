@@ -14,6 +14,19 @@ class StatisticProductRequestSerializer(BaseSerializer):
 class StatisticProductSerializer(BaseSerializer):
     id = serializers.UUIDField(read_only=True)
     name = serializers.CharField(read_only=True)
-    code = serializers.CharField(read_only=True)
     revenue = serializers.IntegerField(read_only=True)
     cost = serializers.IntegerField(read_only=True)
+
+
+class StatisticOrderRequestSerializer(BaseSerializer):
+    time_range = serializers.IntegerField(required=False, default=7)  # days
+
+
+class StatisticOrderSerializer(BaseSerializer):
+    name = serializers.CharField(read_only=True)
+    total_orders = serializers.ListField(read_only=True)
+
+
+class StatisticOrderResponseSerializer(BaseSerializer):
+    date_of_orders = serializers.ListField(read_only=True)
+    terminal_to_list_total_order = StatisticOrderSerializer(read_only=True, many=True)

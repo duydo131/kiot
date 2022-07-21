@@ -22,6 +22,15 @@ class ProductSerializer(serializers.ModelSerializer):
         read_only_fields = ["created_at", "updated_at"]
 
 
+class ProductReadOnlySerializer(serializers.ModelSerializer):
+    terminal_name = serializers.CharField(read_only=True)
+
+    class Meta:
+        model = Product
+        exclude = ["deleted"]
+        read_only_fields = ['all']
+
+
 class ProductCreateSerializer(serializers.ModelSerializer):
     terminal_id = serializers.UUIDField(required=True)
 

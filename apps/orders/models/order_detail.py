@@ -15,7 +15,7 @@ class OrderDetail(SafeDeleteMixin):
     product = models.ForeignKey(
         Product,
         on_delete=models.CASCADE,
-        related_name="cart_product",
+        related_name="order_product",
     )
     order = models.ForeignKey(
         Order,

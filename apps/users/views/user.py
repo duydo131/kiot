@@ -13,13 +13,15 @@ from rest_framework.response import Response
 from apps.carts.serializers.cart import CartSerializer, CartReadOnlySerializer, CartAdditionalSerializer, \
     CartDeleteProductSerializer
 from apps.users.filters import UserFilterSet
-from apps.users.helper.user import get_user_by_params, get_total_product_by_users
+from apps.users.helper.user import get_user_by_params, get_total_product_by_users, get_total_money_by_users, \
+    get_total_order_by_users
 from apps.users.models.user import User, UserRole
 from apps.users.serializers import UserSerializer, UserReadOnlySerializer, LoginSerializer
-from apps.users.serializers.user import RegisterSerializer, UserRegisterSerializer, UserListInputSerializer
+from apps.users.serializers.user import RegisterSerializer, UserRegisterSerializer, UserListInputSerializer, \
+    ChangePasswordSerializer
 from core.base_view import BaseView
 from core.mixins import GetSerializerClassMixin
-from core.permissions import IsUser, IsManager
+from core.permissions import IsUser
 from core.swagger_schemas import ManualParametersAutoSchema
 
 
@@ -39,10 +41,14 @@ class UserViewSet(GetSerializerClassMixin, viewsets.ModelViewSet, BaseView):
 
     def get_queryset(self):
         queryset = self.queryset.all()
-        queryset = queryset.exclude(role=UserRole.ADMIN)
+        user = self.request.user
+        if not user.is_admin:
+            queryset = queryset.exclude(role=UserRole.ADMIN)
         request_data = self.request_data
         queryset = get_user_by_params(queryset, request_data)
-        queryset = queryset.annotate(total_terminal=Count('terminals')).order_by('-total_terminal')
+        queryset = queryset.annotate(
+            total_terminal=Count('terminals')
+        ).order_by('-total_terminal')
 
         return queryset
 
@@ -70,20 +76,43 @@ class UserViewSet(GetSerializerClassMixin, viewsets.ModelViewSet, BaseView):
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
         users = queryset.filter()
+
+        serializer = UserListInputSerializer(data=self.request_data)
+        serializer.is_valid(raise_exception=True)
+        validated_data = serializer.validated_data
+
         user_id_to_total_product = get_total_product_by_users(users)
+        user_id_to_total_money = get_total_money_by_users(users=users, data=validated_data)
+        user_id_to_total_order = get_total_order_by_users(users=users, data=validated_data)
         page = self.paginate_queryset(queryset)
+        context = {
+            'user_id_to_total_product': user_id_to_total_product,
+            'user_id_to_total_money': user_id_to_total_money,
+            'user_id_to_total_order': user_id_to_total_order
+        }
         if page is not None:
-            serializer = self.get_serializer(
-                page,
-                many=True,
-                context={'user_id_to_total_product': user_id_to_total_product}
-            )
+            serializer = self.get_serializer(page, many=True, context=context)
             return self.get_paginated_response(serializer.data)
 
+        serializer = self.get_serializer(queryset, many=True, context=context)
+        return Response(serializer.data)
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = UserListInputSerializer(data=self.request_data)
+        serializer.is_valid(raise_exception=True)
+        validated_data = serializer.validated_data
+
+        user_id_to_total_product = get_total_product_by_users([instance])
+        user_id_to_total_money = get_total_money_by_users(users=[instance], data=validated_data)
+        user_id_to_total_order = get_total_order_by_users(users=[instance], data=validated_data)
         serializer = self.get_serializer(
-                queryset,
-                many=True,
-                context={'user_id_to_total_product': user_id_to_total_product}
+            instance,
+            context={
+                'user_id_to_total_product': user_id_to_total_product,
+                'user_id_to_total_money': user_id_to_total_money,
+                'user_id_to_total_order': user_id_to_total_order
+            }
         )
         return Response(serializer.data)
 
@@ -111,18 +140,22 @@ class UserViewSet(GetSerializerClassMixin, viewsets.ModelViewSet, BaseView):
             user = authenticate(username=username, password=password)
         except exceptions.NotFound:
             raise APIException(
-                _("User or password is wrong"),
+                _("Tài khoản hoặc mật khẩu khong chính xác"),
                 status.HTTP_404_NOT_FOUND,
             )
         except:
             raise APIException(_("Invalid token"), status.HTTP_400_BAD_REQUEST)
         if not user:
             raise APIException(
-                _("User with username {username} not found").format(username=username),
+                _("Tài khoản hoặc mật khẩu khong chính xác").format(username=username),
                 status.HTTP_404_NOT_FOUND,
             )
         token = user.token
-        data = {"token": token, "is_superuser": user.is_superuser}
+        data = {
+            "token": token,
+            "is_superuser": user.is_superuser or user.is_admin,
+            "is_user": user.is_user
+        }
         return Response(data=data, status=status.HTTP_200_OK)
 
     @action(
@@ -160,6 +193,35 @@ class UserViewSet(GetSerializerClassMixin, viewsets.ModelViewSet, BaseView):
         token = new_user.token
         data = {"token": token}
         return Response(data=data, status=status.HTTP_200_OK)
+
+    @action(
+        methods=["POST"],
+        detail=False,
+        url_path="change-password",
+        url_name="change_password",
+        filterset_class=None,
+        permission_classes=[IsAuthenticated],
+        pagination_class=None,
+    )
+    def change_password(self, request, *args, **kwargs):
+        serializer = ChangePasswordSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        password = serializer.validated_data['password']
+        new_password = serializer.validated_data['new_password']
+        current_user = request.user
+
+        try:
+            user = authenticate(username=current_user.username, password=password)
+            if user is None:
+                raise exceptions.NotFound
+            user.set_password(new_password)
+            user.save()
+        except exceptions.NotFound:
+            raise APIException(_("Mật khẩu không đúng"), status.HTTP_404_NOT_FOUND)
+        except Exception:
+            raise APIException(_("Cannot change password"), status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        return Response(status=status.HTTP_200_OK)
 
     # @swagger_auto_schema(
     #     operation_description="Get cart",

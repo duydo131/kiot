@@ -1,6 +1,10 @@
+from calendar import monthrange
+from numbers import Number
+
 import pytz
 import jwt
-import inspect, os
+import datetime
+import dateutil.relativedelta
 
 from django.db.models import Model
 from django.utils.deconstruct import deconstructible
@@ -46,7 +50,6 @@ def create_model(data, serializer_model):
         serializer = serializer_model(data=data)
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        raise Exception("error")
         return serializer
     except Exception as e:
         pass
@@ -129,3 +132,20 @@ def iterate_all(iterable, ignore_keys=None, returned="key"):
         for el in iterable:
             for ret in iterate_all(el, returned=returned, ignore_keys=ignore_keys):
                 yield ret
+
+
+def get_any_day_ago(days: float):
+    tod = datetime.datetime.now()
+    d = datetime.timedelta(days=days)
+    start_date = tod - d
+    return start_date.strftime("%Y-%m-%d")
+
+
+def get_any_month_ago(months: int):
+    today = datetime.datetime.now()
+    day_of_month = today + dateutil.relativedelta.relativedelta(months=1-months)
+    start = day_of_month.date().replace(day=1)
+    end = today.date().replace(day=monthrange(today.year, today.month)[1])
+
+    return start, end
+

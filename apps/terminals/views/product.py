@@ -1,4 +1,5 @@
 from django.contrib.auth import authenticate
+from django.db.models import F
 from django.utils.translation import gettext_lazy as _
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import viewsets, status, exceptions
@@ -9,7 +10,8 @@ from apps.terminals.helper.product import get_by_product_input
 from apps.terminals.models import Product, CatalogImport
 from apps.terminals.serializers.catalog import CatalogImportSerializer
 from apps.terminals.serializers.product import ProductSerializer, ProductListInputSerializer, ProductCreateSerializer, \
-    AddProductSerializer, ProductDetailSerializer, ProductBulkCreateSerializer, AddSingleProductSerializer
+    AddProductSerializer, ProductDetailSerializer, ProductBulkCreateSerializer, AddSingleProductSerializer, \
+    ProductReadOnlySerializer
 from apps.terminals.task import import_product_handler
 from apps.users.serializers import LoginSerializer
 from rest_framework.decorators import action
@@ -29,15 +31,18 @@ class ProductViewSet(GetSerializerClassMixin, viewsets.ModelViewSet, BaseView):
     inp_serializer_cls = ProductListInputSerializer
 
     serializer_action_classes = {
-        "list": ProductSerializer,
+        "list": ProductReadOnlySerializer,
         "retrieve": ProductDetailSerializer,
     }
 
     def get_queryset(self):
         queryset = self.queryset.filter()
         request_data = self.request_data
+        user = self.request.user
+        if user.is_manager:
+            queryset = queryset.filter(terminal__seller_id=user.id)
         queryset = get_by_product_input(queryset, request_data)
-
+        queryset = queryset.annotate(terminal_name=F('terminal__name'))
         return queryset
 
     @swagger_auto_schema(

@@ -27,6 +27,7 @@ class UserReadOnlySerializer(serializers.Serializer):
     id = serializers.UUIDField(read_only=True)
     fid = serializers.CharField(read_only=True)
     name = serializers.CharField(read_only=True)
+    username = serializers.CharField(read_only=True)
     email = serializers.EmailField(read_only=True)
     address = serializers.CharField(read_only=True)
     avatar_url = serializers.CharField(read_only=True)
@@ -37,17 +38,42 @@ class UserReadOnlySerializer(serializers.Serializer):
     updated_at = serializers.DateTimeField(read_only=True)
     total_terminal = serializers.IntegerField(read_only=True)
     total_product = serializers.IntegerField(read_only=True)
+    total_order = serializers.IntegerField(read_only=True)
+    total_money = serializers.IntegerField(read_only=True)
 
     def to_representation(self, instance):
         user_id_to_total_product = self.context.get('user_id_to_total_product')
+        user_id_to_total_money = self.context.get('user_id_to_total_money')
+        user_id_to_total_order = self.context.get('user_id_to_total_order')
+
         if isinstance(user_id_to_total_product, dict):
             instance.total_product = user_id_to_total_product.get(instance.id, 0)
+
+        if isinstance(user_id_to_total_money, dict):
+            instance.total_money = user_id_to_total_money.get(instance.id, 0)
+
+        if isinstance(user_id_to_total_order, dict):
+            instance.total_order = user_id_to_total_order.get(instance.id, 0)
+
         return super(UserReadOnlySerializer, self).to_representation(instance)
 
 
 class LoginSerializer(serializers.Serializer):
     username = serializers.CharField(required=True)
     password = serializers.CharField(required=True)
+
+
+class ChangePasswordSerializer(serializers.Serializer):
+    password = serializers.CharField(required=True)
+    new_password = serializers.CharField(required=True)
+
+    def validate(self, data):
+        password = data.get('password')
+        new_password = data.get('new_password')
+        if password == new_password:
+            raise serializers.ValidationError("Mật khẩu mới trùng với mật khẩu cũ")
+
+        return data
 
 
 class RegisterSerializer(serializers.Serializer):
@@ -67,4 +93,15 @@ class RegisterSerializer(serializers.Serializer):
 class UserListInputSerializer(BaseSerializer):
     ids = UUIDArrayField(required=False)
     role = serializers.CharField(required=False)
+    type = serializers.CharField(required=False)
+    value = serializers.IntegerField(required=False)
 
+    def validate(self, data):
+        type_filter = data.get('type')
+        value = data.get('value', 0)
+        if type_filter is None and value == 0:
+            return data
+        if type_filter != 'all' and value < 0:
+            raise serializers.ValidationError("Lỗi hệ thống!")
+
+        return data

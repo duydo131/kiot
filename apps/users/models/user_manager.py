@@ -13,6 +13,7 @@ class CustomUserManager(SafeDeleteManager, BaseUserManager):
         user.set_password(password)
         user.is_superuser = True
         user.is_staff = True
+        user.name = username
         user.save(using=self._db)
         try:
             user.role = 'ADMIN'

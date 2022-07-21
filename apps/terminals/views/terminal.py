@@ -43,7 +43,7 @@ class TerminalViewSet(GetSerializerClassMixin, viewsets.ModelViewSet, BaseView):
 
         queryset = queryset.filter(type=TerminalStatus.PAID).annotate(total_product=Count('products'))
 
-        return queryset
+        return queryset.order_by('-total_product')
 
     @swagger_auto_schema(
         operation_description="Detail",
@@ -67,10 +67,10 @@ class TerminalViewSet(GetSerializerClassMixin, viewsets.ModelViewSet, BaseView):
         queryset = self.get_queryset()
         page = self.paginate_queryset(queryset)
         if page is not None:
-            serializer = self.get_serializer(page, many=True)
+            serializer = TerminalReadOnlySerializer(page, many=True)
             return self.get_paginated_response(serializer.data)
 
-        serializer = self.get_serializer(queryset, many=True)
+        serializer = TerminalReadOnlySerializer(queryset, many=True)
         return Response(serializer.data)
 
     @action(
