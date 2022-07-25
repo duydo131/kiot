@@ -136,7 +136,7 @@ def extend_terminal_handler(handler_id, is_success=True, **kwargs):
 
     if is_success:
         terminal.type = TerminalStatus.PAID
-        terminal.max_quantity_product += terminal.extend_max_quantity_product
+        terminal.max_quantity_product = terminal.extend_max_quantity_product
         if terminal.expired_at < now:
             terminal.time_open = now
             terminal.time_selling = terminal.extend_time_selling
