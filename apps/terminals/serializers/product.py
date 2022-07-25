@@ -136,6 +136,7 @@ class ProductListInputSerializer(BaseSerializer):
     terminal_id = serializers.UUIDField(required=False)
     min_price = serializers.IntegerField(required=False)
     max_price = serializers.IntegerField(required=False)
+    is_active = serializers.BooleanField(required=False)
 
 
 class ProductDetailSerializer(serializers.ModelSerializer):

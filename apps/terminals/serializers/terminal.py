@@ -145,6 +145,8 @@ class TerminalListInputSerializer(BaseSerializer):
     status = serializers.BooleanField(required=False)
     page = serializers.IntegerField(required=False)
     page_size = serializers.IntegerField(required=False)
+    name = serializers.CharField(required=False)
+    code = serializers.CharField(required=False)
 
 
 class TerminalPriceSerializer(BaseSerializer):

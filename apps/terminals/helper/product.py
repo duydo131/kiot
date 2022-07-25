@@ -38,6 +38,10 @@ def get_by_product_input(queryset, request_data):
     if max_price is not None:
         queryset = queryset.filter(price__gte=max_price)
 
+    is_active = request_data.get('is_active')
+    if is_active is not None:
+        queryset = queryset.filter(is_active=is_active)
+
     return queryset
 
 

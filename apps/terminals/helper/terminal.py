@@ -12,6 +12,14 @@ def get_by_terminal_input(queryset, request_data, seller_id=None):
     if ids:
         queryset = queryset.filter(id__in=ids)
 
+    name = request_data.get('name')
+    if name:
+        queryset = queryset.filter(name__icontains=name)
+
+    code = request_data.get('code')
+    if code:
+        queryset = queryset.filter(code__icontains=code)
+
     is_expired = request_data.get('is_expired')
     if is_expired is not None:
         now = timezone.now()
