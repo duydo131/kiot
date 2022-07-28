@@ -158,7 +158,7 @@ def extend_terminal_handler(handler_id, is_success=True, **kwargs):
             type=TypeTerminalPayment.EXTEND,
         ).save()
     else:
-        terminal.type = TerminalStatus.EXTEND_FAIL
+        terminal.type = TerminalStatus.PAID
         terminal.extend_max_quantity_product = 0
         terminal.extend_time_selling = 0
     terminal.save()

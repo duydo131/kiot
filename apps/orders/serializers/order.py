@@ -84,7 +84,8 @@ class OrderDetailSerializer(BaseSerializer):
 
             total_price += quantity * product.price
 
-        order.total_price = total_price + calculate_fee(total_price)
+        order.total_price = total_price
+        order.fee = calculate_fee(total_price)
         order.save()
         order.refresh_from_db()
         if len(warehouses) > 0:

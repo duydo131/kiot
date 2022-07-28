@@ -9,9 +9,11 @@ from rest_framework.response import Response
 
 from apps.terminals.models import Terminal
 from apps.terminals.serializers.statistic import StatisticProductSerializer, StatisticProductRequestSerializer, \
-    StatisticOrderRequestSerializer, StatisticOrderSerializer, StatisticOrderResponseSerializer
+    StatisticOrderRequestSerializer, StatisticOrderSerializer, StatisticOrderResponseSerializer, \
+    StatisticRevenueAllResponseSerializer
 from apps.users.filters import UserFilterSet
-from apps.users.helper.statistic import extract_data_order_statistic
+from apps.users.helper.statistic import extract_data_order_statistic, extract_data_revenue_by_user_statistic, \
+    extract_data_revenue_by_time_statistic
 from apps.users.models.user import User
 from apps.users.serializers import UserSerializer, UserReadOnlySerializer
 from config.settings.dev import LIMIT_STATISTIC_ORDER
@@ -350,4 +352,137 @@ class StatisticViewSet(GetSerializerClassMixin, viewsets.ModelViewSet):
 
         data = extract_data_order_statistic(results)
         result = StatisticOrderResponseSerializer(data)
+        return Response(data=result.data, status=status.HTTP_200_OK)
+
+    @swagger_auto_schema(
+        operation_description="get order",
+        auto_schema=ManualParametersAutoSchema,
+        responses={200: UserReadOnlySerializer},
+    )
+    @action(
+        methods=["GET"],
+        detail=False,
+        url_path="revenue-platform",
+        url_name="revenue_platform",
+        permission_classes=[IsAuthenticated],
+        filterset_class=None,
+        pagination_class=None,
+    )
+    def revenue_platform(self, request, *args, **kwargs):
+        serializer = StatisticOrderRequestSerializer(data=request.query_params)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        time_range = data.get('time_range', 7)
+        start_date_str = get_any_day_ago(time_range * LIMIT_STATISTIC_ORDER)
+
+        query = f"""
+                SELECT *
+                FROM 
+                    (SELECT DATE_FORMAT(ADDDATE('{start_date_str}', @num := @num + {time_range} ), '%Y-%m-%d') date
+                    FROM `orders`, (SELECT @num := -{time_range} ) num
+                    WHERE DATE_FORMAT(ADDDATE('{start_date_str}', @num := @num), '%Y-%m-%d') < current_timestamp) 
+                series 
+                    LEFT JOIN 
+                    (
+                    SELECT 
+                        sum(fee) as total_amount_order,
+                        FROM_UNIXTIME(
+                        FLOOR(
+                            (UNIX_TIMESTAMP(`orders`.`created_at`) + (24 * 60 * 60)) / ({time_range} * 24 * 60 * 60)
+                        ) * ({time_range}  * 24 * 60 * 60), '%Y-%m-%d') AS time_key
+                    FROM `orders`
+                    WHERE `orders`.`deleted` IS NULL
+                    GROUP BY time_key
+                    ) 
+                order_time_range
+                    ON (
+                    order_time_range.time_key >= series.date 
+                    AND order_time_range.time_key < (DATE_FORMAT(ADDDATE(series.date,  INTERVAL {time_range}  DAY),'%Y-%m-%d'))
+                    )
+                    LEFT JOIN 
+                    (
+                    SELECT 
+                        sum(`transactions`.`amount`) as total_amount_terminal,
+                        FROM_UNIXTIME(
+                        FLOOR(
+                            (UNIX_TIMESTAMP(`terminal_payment`.`created_at`) + (24 * 60 * 60)) / ({time_range} * 24 * 60 * 60)
+                        ) * ({time_range}  * 24 * 60 * 60), '%Y-%m-%d') AS time_key
+                    FROM `terminal_payment` INNER JOIN `transactions` ON `terminal_payment`.`transaction_id` = `transactions`.`id`
+                    WHERE `terminal_payment`.`deleted` IS NULL AND `transactions`.`deleted` IS NULL 
+                    GROUP BY time_key
+                    ) 
+                terminal_time_range
+                    ON (
+                    terminal_time_range.time_key >= series.date 
+                    AND terminal_time_range.time_key < (DATE_FORMAT(ADDDATE(series.date,  INTERVAL {time_range}  DAY),'%Y-%m-%d'))
+                    )
+                WHERE series.date < current_timestamp
+                ORDER BY series.date desc
+            """
+
+        with connection.cursor() as cursor:
+            cursor.execute(query)
+            results = dictfetchall(cursor)
+
+        data = extract_data_revenue_by_time_statistic(results)
+        result = StatisticRevenueAllResponseSerializer(data)
+        return Response(data=result.data, status=status.HTTP_200_OK)
+
+    @swagger_auto_schema(
+        operation_description="get order",
+        auto_schema=ManualParametersAutoSchema,
+        responses={200: UserReadOnlySerializer},
+    )
+    @action(
+        methods=["GET"],
+        detail=False,
+        url_path="revenue-user",
+        url_name="revenue_user",
+        permission_classes=[IsAuthenticated],
+        filterset_class=None,
+        pagination_class=None,
+    )
+    def revenue_user(self, request, *args, **kwargs):
+        serializer = StatisticOrderRequestSerializer(data=request.query_params)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        time_range = data.get('time_range', 7)
+        start_date_str = get_any_day_ago(time_range * LIMIT_STATISTIC_ORDER)
+
+        query = f"""
+                SELECT *
+                FROM 
+                    (SELECT DATE_FORMAT(ADDDATE('{start_date_str}', @num := @num + {time_range} ), '%Y-%m-%d') date
+                    FROM `transactions`, (SELECT @num := -{time_range} ) num
+                    WHERE DATE_FORMAT(ADDDATE('{start_date_str}', @num := @num), '%Y-%m-%d') < current_timestamp) 
+                series 
+                    LEFT JOIN 
+                    (
+                    SELECT 
+                        sum(amount) as total_amount,
+                        FROM_UNIXTIME(
+                        FLOOR(
+                            (UNIX_TIMESTAMP(`transactions`.`created_at`) + (24 * 60 * 60)) / ({time_range} * 24 * 60 * 60)
+                        ) * ({time_range}  * 24 * 60 * 60), '%Y-%m-%d') AS time_key
+                    FROM `transactions`
+                    WHERE `transactions`.`deleted` IS NULL
+                    GROUP BY time_key
+                    ) 
+                time_range
+                    ON (
+                    time_range.time_key >= series.date 
+                    AND time_range.time_key < (DATE_FORMAT(ADDDATE(series.date,  INTERVAL {time_range}  DAY),'%Y-%m-%d'))
+                    )
+                WHERE series.date < current_timestamp
+                ORDER BY series.date desc
+            """
+
+        with connection.cursor() as cursor:
+            cursor.execute(query)
+            results = dictfetchall(cursor)
+
+        data = extract_data_revenue_by_user_statistic(results)
+        result = StatisticRevenueAllResponseSerializer(data)
         return Response(data=result.data, status=status.HTTP_200_OK)

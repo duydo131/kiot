@@ -26,6 +26,7 @@ class Order(SafeDeleteMixin):
         related_name="orders",
     )
     total_price = models.BigIntegerField(blank=True, null=True)
+    fee = models.BigIntegerField(default=0)
     transaction = models.OneToOneField(
         Transaction,
         on_delete=models.CASCADE,

@@ -30,3 +30,8 @@ class StatisticOrderSerializer(BaseSerializer):
 class StatisticOrderResponseSerializer(BaseSerializer):
     date_of_orders = serializers.ListField(read_only=True)
     terminal_to_list_total_order = StatisticOrderSerializer(read_only=True, many=True)
+
+
+class StatisticRevenueAllResponseSerializer(BaseSerializer):
+    dates = serializers.ListField(read_only=True)
+    revenues = serializers.ListField(read_only=True)

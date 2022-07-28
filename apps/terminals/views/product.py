@@ -11,13 +11,14 @@ from apps.terminals.models import Product, CatalogImport
 from apps.terminals.serializers.catalog import CatalogImportSerializer
 from apps.terminals.serializers.product import ProductSerializer, ProductListInputSerializer, ProductCreateSerializer, \
     AddProductSerializer, ProductDetailSerializer, ProductBulkCreateSerializer, AddSingleProductSerializer, \
-    ProductReadOnlySerializer
+    ProductReadOnlySerializer, GetTerminalOfProductSerializer
+from apps.terminals.serializers.terminal import TerminalReadOnlySerializer, TerminalSerializer
 from apps.terminals.task import import_product_handler
 from apps.users.serializers import LoginSerializer
 from rest_framework.decorators import action
 from core.base_view import BaseView
 from core.mixins import GetSerializerClassMixin
-from core.permissions import IsManager
+from core.permissions import IsManager, IsAdmin
 from core.swagger_schemas import ManualParametersAutoSchema
 
 
@@ -69,6 +70,23 @@ class ProductViewSet(GetSerializerClassMixin, viewsets.ModelViewSet, BaseView):
             return self.get_paginated_response(serializer.data)
 
         serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
+
+    @action(
+        methods=["GET"],
+        detail=False,
+        url_path="terminal",
+        url_name="terminal",
+        permission_classes=[IsManager | IsAdmin],
+        filterset_class=None,
+        pagination_class=None,
+    )
+    def terminal(self, request, *args, **kwargs):
+        serializer = GetTerminalOfProductSerializer(data=request.query_params)
+        serializer.is_valid(raise_exception=True)
+        product_id = serializer.validated_data['id']
+        product = Product.objects.get(pk=product_id)
+        serializer = TerminalSerializer(instance=product.terminal)
         return Response(serializer.data)
 
     @swagger_auto_schema(

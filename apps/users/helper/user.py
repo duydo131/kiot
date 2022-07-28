@@ -33,10 +33,20 @@ def get_total_money_by_users(users: List[User], data=None):
         data = {}
     user_ids = [user.id for user in users]
     condition = Q(id__in=user_ids)
+
     if data.get('type') == 'month':
         month = data.get('value', 1)
         start, end = get_any_month_ago(month)
         condition &= Q(transaction_set__created_at__range=[start, end])
+
+    started_at_from = data.get('started_at_from')
+    if started_at_from:
+        condition &= Q(transaction_set__created_at__gte=started_at_from)
+
+    ended_at_to = data.get('ended_at_to')
+    if ended_at_to:
+        condition &= Q(transaction_set__created_at__lte=ended_at_to)
+
     add_on_users = User.objects.filter(condition).annotate(total_money=Coalesce(Sum('transaction_set__amount'), 0))
     return {
         user.id: user.total_money
@@ -49,12 +59,48 @@ def get_total_order_by_users(users: List[User], data=None):
         data = {}
     user_ids = [user.id for user in users]
     condition = Q(id__in=user_ids)
+
     if data.get('type') == 'month':
         month = data.get('value', 1)
         start, end = get_any_month_ago(month)
         condition &= Q(orders__created_at__range=[start, end])
+
+    started_at_from = data.get('started_at_from')
+    if started_at_from:
+        condition &= Q(transaction_set__created_at__gte=started_at_from)
+
+    ended_at_to = data.get('ended_at_to')
+    if ended_at_to:
+        condition &= Q(transaction_set__created_at__lte=ended_at_to)
+
     add_on_users = User.objects.filter(condition).annotate(total_order=Coalesce(Count('orders'), 0))
     return {
         user.id: user.total_order
+        for user in add_on_users
+    }
+
+
+def get_total_revenue_by_users(users: List[User], data=None):
+    if data is None:
+        data = {}
+    user_ids = [user.id for user in users]
+    condition = Q(id__in=user_ids)
+
+    if data.get('type') == 'month':
+        month = data.get('value', 1)
+        start, end = get_any_month_ago(month)
+        condition &= Q(orders__created_at__range=[start, end])
+
+    started_at_from = data.get('started_at_from')
+    if started_at_from:
+        condition &= Q(transaction_set__created_at__gte=started_at_from)
+
+    ended_at_to = data.get('ended_at_to')
+    if ended_at_to:
+        condition &= Q(transaction_set__created_at__lte=ended_at_to)
+
+    add_on_users = User.objects.filter(condition).annotate(total_revenue=Coalesce(Sum('orders__fee'), 0))
+    return {
+        user.id: user.total_revenue
         for user in add_on_users
     }

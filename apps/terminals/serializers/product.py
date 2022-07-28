@@ -152,3 +152,15 @@ class ProductDetailSerializer(serializers.ModelSerializer):
 
 class ProductBulkCreateSerializer(BaseSerializer):
     file_url = serializers.CharField(required=True)
+
+
+class GetTerminalOfProductSerializer(BaseSerializer):
+    id = serializers.UUIDField(required=True)
+
+    def validate(self, data):
+        product_id = data.get('id')
+        product = Product.objects.filter(pk=product_id)
+        if len(product) == 0:
+            raise serializers.ValidationError(f"sản phẩm id={product_id} không tồn tại")
+        return data
+

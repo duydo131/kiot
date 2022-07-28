@@ -14,7 +14,7 @@ from apps.carts.serializers.cart import CartSerializer, CartReadOnlySerializer, 
     CartDeleteProductSerializer
 from apps.users.filters import UserFilterSet
 from apps.users.helper.user import get_user_by_params, get_total_product_by_users, get_total_money_by_users, \
-    get_total_order_by_users
+    get_total_order_by_users, get_total_revenue_by_users
 from apps.users.models.user import User, UserRole
 from apps.users.serializers import UserSerializer, UserReadOnlySerializer, LoginSerializer
 from apps.users.serializers.user import RegisterSerializer, UserRegisterSerializer, UserListInputSerializer, \
@@ -84,11 +84,13 @@ class UserViewSet(GetSerializerClassMixin, viewsets.ModelViewSet, BaseView):
         user_id_to_total_product = get_total_product_by_users(users)
         user_id_to_total_money = get_total_money_by_users(users=users, data=validated_data)
         user_id_to_total_order = get_total_order_by_users(users=users, data=validated_data)
+        user_id_to_total_revenue = get_total_revenue_by_users(users=users, data=validated_data)
         page = self.paginate_queryset(queryset)
         context = {
             'user_id_to_total_product': user_id_to_total_product,
             'user_id_to_total_money': user_id_to_total_money,
-            'user_id_to_total_order': user_id_to_total_order
+            'user_id_to_total_order': user_id_to_total_order,
+            'user_id_to_total_revenue': user_id_to_total_revenue
         }
         if page is not None:
             serializer = self.get_serializer(page, many=True, context=context)
@@ -106,12 +108,14 @@ class UserViewSet(GetSerializerClassMixin, viewsets.ModelViewSet, BaseView):
         user_id_to_total_product = get_total_product_by_users([instance])
         user_id_to_total_money = get_total_money_by_users(users=[instance], data=validated_data)
         user_id_to_total_order = get_total_order_by_users(users=[instance], data=validated_data)
+        user_id_to_total_revenue = get_total_revenue_by_users(users=[instance], data=validated_data)
         serializer = self.get_serializer(
             instance,
             context={
                 'user_id_to_total_product': user_id_to_total_product,
                 'user_id_to_total_money': user_id_to_total_money,
-                'user_id_to_total_order': user_id_to_total_order
+                'user_id_to_total_order': user_id_to_total_order,
+                'user_id_to_total_revenue': user_id_to_total_revenue
             }
         )
         return Response(serializer.data)

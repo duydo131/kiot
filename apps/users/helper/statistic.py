@@ -3,7 +3,7 @@ from typing import List
 from config.settings.dev import LIMIT_STATISTIC_ORDER, LIMIT_TERMINAL_OF_STATISTIC_ORDER
 
 
-def get_date_of_orders(results: List):
+def get_dates(results: List):
     date_of_orders_object = {}
     date_of_orders = []
     for rs in results:
@@ -47,7 +47,7 @@ def get_terminal_of_order(results: List):
 
 
 def extract_data_order_statistic(results: List):
-    date_of_orders = get_date_of_orders(results)
+    date_of_orders = get_dates(results)
     date_to_terminal = get_total_order_by_date(results)
     terminals = get_terminal_of_order(results)
 
@@ -72,4 +72,36 @@ def extract_data_order_statistic(results: List):
             }
             for t in terminal_to_list_total_order
         ]
+    }
+
+
+def extract_data_revenue_by_user_statistic(results: List):
+    dates = []
+    revenues = []
+    for rs in results:
+        dates.append(rs['date'])
+        revenues.append(rs.get('total_amount') or 0)
+        if len(dates) >= LIMIT_STATISTIC_ORDER:
+            break
+
+    return {
+        'dates': dates,
+        'revenues': revenues
+    }
+
+
+def extract_data_revenue_by_time_statistic(results: List):
+    dates = []
+    revenues = []
+    for rs in results:
+        dates.append(rs['date'])
+        revenue_order = rs.get('total_amount_order') or 0
+        revenue_terminal = rs.get('total_amount_terminal') or 0
+        revenues.append(revenue_order + revenue_terminal)
+        if len(dates) >= LIMIT_STATISTIC_ORDER:
+            break
+
+    return {
+        'dates': dates,
+        'revenues': revenues
     }
