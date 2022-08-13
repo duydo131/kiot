@@ -1,17 +1,13 @@
 from django.db import connection
-from django.db.models import Q, Sum, F
-from django.db.models.functions import Coalesce
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from apps.terminals.models import Terminal
 from apps.terminals.serializers.statistic import StatisticProductSerializer, StatisticProductRequestSerializer, \
-    StatisticOrderRequestSerializer, StatisticOrderSerializer, StatisticOrderResponseSerializer, \
+    StatisticOrderRequestSerializer, StatisticOrderResponseSerializer, \
     StatisticRevenueAllResponseSerializer
-from apps.users.filters import UserFilterSet
 from apps.users.helper.statistic import extract_data_order_statistic, extract_data_revenue_by_user_statistic, \
     extract_data_revenue_by_time_statistic
 from apps.users.models.user import User
@@ -35,7 +31,7 @@ class StatisticViewSet(GetSerializerClassMixin, viewsets.ModelViewSet):
         "list": UserReadOnlySerializer,
         "retrieve": UserReadOnlySerializer,
     }
-    filterset_class = UserFilterSet
+    filterset_class = None
 
     def get_queryset(self):
         queryset = self.queryset.all()

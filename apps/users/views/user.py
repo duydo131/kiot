@@ -12,7 +12,6 @@ from rest_framework.response import Response
 
 from apps.carts.serializers.cart import CartSerializer, CartReadOnlySerializer, CartAdditionalSerializer, \
     CartDeleteProductSerializer
-from apps.users.filters import UserFilterSet
 from apps.users.helper.user import get_user_by_params, get_total_product_by_users, get_total_money_by_users, \
     get_total_order_by_users, get_total_revenue_by_users
 from apps.users.models.user import User, UserRole
@@ -37,7 +36,7 @@ class UserViewSet(GetSerializerClassMixin, viewsets.ModelViewSet, BaseView):
         "list": UserReadOnlySerializer,
         "retrieve": UserReadOnlySerializer,
     }
-    filterset_class = UserFilterSet
+    filterset_class = None
 
     def get_queryset(self):
         queryset = self.queryset.all()

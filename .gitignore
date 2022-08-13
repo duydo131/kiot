@@ -131,8 +131,6 @@ db
 #file temporary
 /txt
 
-ftechcache-0.1.3.tar.gz
 celerybeat-schedule.db
-fake_kafka_data.py
 
 core/file_service/assets/*
