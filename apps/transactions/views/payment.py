@@ -47,7 +47,7 @@ class PaymentViewSet(GetSerializerClassMixin, viewsets.ModelViewSet, BaseView):
         validate_data = serializer.validated_data
         transaction = Transaction.objects.get(pk=validate_data.get('id'))
         # handler_success.delay(transaction)
-        handler_success(transaction=transaction, user=request.user)
+        handler_success.delay(transaction_id=transaction.id, user_id=request.user.id)
         return Response(data=TransactionSerializer(transaction).data)
 
     @swagger_auto_schema(
@@ -68,10 +68,9 @@ class PaymentViewSet(GetSerializerClassMixin, viewsets.ModelViewSet, BaseView):
         serializer = PaymentFailSerializer(data=request.data)
         serializer.is_valid()
         validate_data = serializer.validated_data
-        # handler_success.delay(transaction)
-        handler_fail(
+        handler_fail.delay(
             transaction_type=validate_data.get('transaction_type'),
             handler_id=validate_data.get('handler_id'),
-            user=request.user
+            user_id=request.user.id
         )
         return Response(data="OK")

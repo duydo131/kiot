@@ -101,6 +101,8 @@ class AddProductSerializer(BaseSerializer):
         if len(terminals) != 1:
             raise serializers.ValidationError("terminal_code not exists")
         terminal = terminals.first()
+        if Product.objects.filter(terminal_id=terminal.id).count() >= terminal.max_quantity_product:
+            raise serializers.ValidationError(f"terminal {terminal.name} is full")
         data['terminal_id'] = terminal.id
         return data
 

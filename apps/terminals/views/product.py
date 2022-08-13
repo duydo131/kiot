@@ -1,4 +1,5 @@
 from django.contrib.auth import authenticate
+from django.contrib.auth.models import AnonymousUser
 from django.db.models import F
 from django.utils.translation import gettext_lazy as _
 from drf_yasg.utils import swagger_auto_schema
@@ -40,7 +41,7 @@ class ProductViewSet(GetSerializerClassMixin, viewsets.ModelViewSet, BaseView):
         queryset = self.queryset.filter()
         request_data = self.request_data
         user = self.request.user
-        if user.is_manager:
+        if not isinstance(user, AnonymousUser) and user.is_manager:
             queryset = queryset.filter(terminal__seller_id=user.id)
         queryset = get_by_product_input(queryset, request_data)
         queryset = queryset.annotate(terminal_name=F('terminal__name'))
@@ -117,6 +118,8 @@ class ProductViewSet(GetSerializerClassMixin, viewsets.ModelViewSet, BaseView):
         user = request.user
         catalog = CatalogImport(user=user, source_file=file_url)
         catalog.save()
-        import_product_handler(catalog)
+        catalog.refresh_from_db()
+        import_product_handler.delay(catalog.id)
+        # import_product_handler(catalog.id)
 
         return Response(data=CatalogImportSerializer(catalog).data, status=status.HTTP_200_OK)

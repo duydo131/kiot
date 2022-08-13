@@ -67,11 +67,25 @@ class UserViewSet(GetSerializerClassMixin, viewsets.ModelViewSet, BaseView):
         pagination_class=None,
     )
     def me(self, request, *args, **kwargs):
-        user = request.user
-        serializer = self.serializer_action_classes.get("retrieve")(
-            user
+        instance = request.user
+        serializer = UserListInputSerializer(data=self.request_data)
+        serializer.is_valid(raise_exception=True)
+        validated_data = serializer.validated_data
+
+        user_id_to_total_product = get_total_product_by_users([instance])
+        user_id_to_total_money = get_total_money_by_users(users=[instance], data=validated_data)
+        user_id_to_total_order = get_total_order_by_users(users=[instance], data=validated_data)
+        user_id_to_total_revenue = get_total_revenue_by_users(users=[instance], data=validated_data)
+        serializer = UserReadOnlySerializer(
+            instance,
+            context={
+                'user_id_to_total_product': user_id_to_total_product,
+                'user_id_to_total_money': user_id_to_total_money,
+                'user_id_to_total_order': user_id_to_total_order,
+                'user_id_to_total_revenue': user_id_to_total_revenue
+            }
         )
-        return Response(data=serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.data)
 
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())

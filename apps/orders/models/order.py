@@ -13,7 +13,6 @@ class OrderType(models.TextChoices):
     CREATE = "CREATE", _("CREATE")
     PAID = "PAID", _("PAID")
     FAIL = "FAIL", _("FAIL")
-    DONE = "DONE", _("DONE")
 
 
 class Order(SafeDeleteMixin):

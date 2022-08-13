@@ -50,17 +50,23 @@ def get_by_catalog_import_input(queryset, request_data):
 class ImportProductHandler:
 
     def __init__(self, catalog: CatalogImport):
-        self.catalog = catalog
-        self.user = catalog.user
-        self.row_index = 4
-        self.max_quantity = 100
-        self.total_rows = 0
-        self.serializer_cls = AddProductSerializer
-        self.errors: Dict[int, str] = {}
-        self.error_column = 'F'
-        self.file_url = catalog.source_file
-        self.max_try = 5
-        self.trying = 0
+        try:
+            self.catalog = catalog
+            self.user = catalog.user
+            self.row_index = 4
+            self.max_quantity = 100
+            self.total_rows = 0
+            self.serializer_cls = AddProductSerializer
+            self.errors: Dict[int, str] = {}
+            self.error_column = 'F'
+            self.file_url = catalog.source_file
+            self.max_try = 5
+            self.trying = 0
+        except Exception as e:
+            if isinstance(self.catalog, CatalogImport):
+                self.catalog.status = ImportStatus.FAIL
+                self.catalog.save()
+            print(e)
 
     @staticmethod
     def convert_cell_type(cell: Cell):

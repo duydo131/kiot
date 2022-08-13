@@ -41,7 +41,8 @@ class TerminalViewSet(GetSerializerClassMixin, viewsets.ModelViewSet, BaseView):
         else:
             queryset = get_by_terminal_input(queryset, request_data)
 
-        queryset = queryset.filter(type=TerminalStatus.PAID).annotate(total_product=Count('products'))
+        queryset = queryset.filter(type__in=[TerminalStatus.PAID, TerminalStatus.EXTEND_FAIL, TerminalStatus.EXTEND])\
+            .annotate(total_product=Count('products'))
 
         return queryset.order_by('-total_product')
 

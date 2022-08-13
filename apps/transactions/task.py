@@ -20,32 +20,52 @@ from django.db import transaction as tran
 
 @app.task
 @tran.atomic()
-def handler_success(transaction: Transaction, **kwargs):
-    if not transaction.status:
-        return
-    transaction_type = transaction.type
-    handler_id = transaction.handler_id
-    if transaction_type == TransactionType.ORDER:
-        order_handler(handler_id=handler_id, is_success=True, transaction=transaction, **kwargs)
-    elif transaction_type == TransactionType.REGISTER_TERMINAL:
-        register_terminal_handler(handler_id=handler_id, is_success=True, transaction=transaction, **kwargs)
-    elif transaction_type == TransactionType.EXTEND_TERMINAL:
-        extend_terminal_handler(handler_id=handler_id, is_success=True, transaction=transaction, **kwargs)
-    else:
-        return
-    transaction.status = False
-    transaction.save()
+def handler_success(transaction_id: UUID, **kwargs):
+    print(f'start handle payment success with transaction_id: {transaction_id}')
+    transaction = None
+    try:
+        user_id: UUID = kwargs.get('user_id')
+        user = User.objects.get(pk=user_id)
+        kwargs['user'] = user
+
+        transaction = Transaction.objects.get(pk=transaction_id)
+        if not transaction.status:
+            return
+        transaction_type = transaction.type
+        handler_id = transaction.handler_id
+        if transaction_type == TransactionType.ORDER:
+            order_handler(handler_id=handler_id, is_success=True, transaction=transaction, **kwargs)
+        elif transaction_type == TransactionType.REGISTER_TERMINAL:
+            register_terminal_handler(handler_id=handler_id, is_success=True, transaction=transaction, **kwargs)
+        elif transaction_type == TransactionType.EXTEND_TERMINAL:
+            extend_terminal_handler(handler_id=handler_id, is_success=True, transaction=transaction, **kwargs)
+        else:
+            return
+        transaction.status = False
+        transaction.save()
+    except Exception as e:
+        print(e)
+        if isinstance(transaction, Transaction):
+            transaction.status = False
+            transaction.save()
 
 
 @app.task
 @tran.atomic()
 def handler_fail(transaction_type: str, handler_id: UUID, **kwargs):
-    if transaction_type == TransactionType.ORDER:
-        order_handler(handler_id=handler_id, is_success=False, **kwargs)
-    if transaction_type == TransactionType.REGISTER_TERMINAL:
-        register_terminal_handler(handler_id=handler_id, is_success=False, **kwargs)
-    if transaction_type == TransactionType.EXTEND_TERMINAL:
-        extend_terminal_handler(handler_id=handler_id, is_success=False, **kwargs)
+    print(f'start handle payment fail with handler_id: {handler_id}')
+    try:
+        user_id: UUID = kwargs.get('user_id')
+        user = User.objects.get(pk=user_id)
+        kwargs['user'] = user
+        if transaction_type == TransactionType.ORDER:
+            order_handler(handler_id=handler_id, is_success=False, **kwargs)
+        if transaction_type == TransactionType.REGISTER_TERMINAL:
+            register_terminal_handler(handler_id=handler_id, is_success=False, **kwargs)
+        if transaction_type == TransactionType.EXTEND_TERMINAL:
+            extend_terminal_handler(handler_id=handler_id, is_success=False, **kwargs)
+    except Exception as e:
+        print(e)
 
 
 @tran.atomic()
@@ -158,7 +178,7 @@ def extend_terminal_handler(handler_id, is_success=True, **kwargs):
             type=TypeTerminalPayment.EXTEND,
         ).save()
     else:
-        terminal.type = TerminalStatus.PAID
-        terminal.extend_max_quantity_product = 0
-        terminal.extend_time_selling = 0
+        terminal.type = TerminalStatus.EXTEND_FAIL
+        # terminal.extend_max_quantity_product = 0
+        # terminal.extend_time_selling = 0
     terminal.save()

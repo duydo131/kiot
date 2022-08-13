@@ -141,6 +141,12 @@ def get_any_day_ago(days: float):
     return start_date.strftime("%Y-%m-%d")
 
 
+def get_date_any_day_ago(days: float):
+    tod = datetime.datetime.now()
+    d = datetime.timedelta(days=days)
+    return tod - d
+
+
 def get_any_month_ago(months: int):
     today = datetime.datetime.now()
     day_of_month = today + dateutil.relativedelta.relativedelta(months=1-months)
